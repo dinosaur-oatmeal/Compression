@@ -1,7 +1,7 @@
 # File Compression and Encryption Tool
 
 ## Overview
-This project offers a versatile toolset designed for file compression and optional encryption. It enables users to compress text files into `.oats` format and decompress `.oats` files back into .txt files. Additionally, it provides functionality to encode and decode `.oats` files using keys specified by the user.
+This project offers a versatile toolset designed for file compression and optional encryption. It enables users to compress text files into `.oats` format and decompress `.oats` files back into text files. Additionally, it provides functionality to encode and decode `.oats` files using keys specified by the user.
 
 ## Features
 - **Compression**: Losslessy Compress files using Huffman coding to reduce file size effectively.
