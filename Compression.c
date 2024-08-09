@@ -514,7 +514,6 @@ void DecompressFile(const char *inputFileName, const char *outputFileName)
     {
         close(inputFile);
         close(outputFile);
-        remove(inputFileName);
         remove(outputFileName);
         printf("Failed to read Huffman Tree. Incorrect key provided.\n");
         exit(0);
@@ -615,6 +614,35 @@ void GetEncodedFileName(char *inputFileName, char *encodedFileName)
         strcpy(dot - 8, "_compressed.oats");
         //printf("\n%s\n", encodedFileName);
     }
+
+    // .jpg and .png file names
+    else
+    {
+        // get original extension
+        const char *extension = strchr(inputFileName, '.');
+        size_t extensionLength = strlen(dot);
+        char extensionBuffer[16];
+        strcpy(extensionBuffer, dot);
+
+        char *encodedPosition = strstr(encodedFileName, "_encoded");
+
+        // decoding filename
+        if(encodedPosition != NULL && (encodedPosition + 8 == dot))
+        {
+            strcpy(encodedPosition, extensionBuffer);
+        }
+
+        // encoding filename
+        else
+        {
+            // cut off end of original filename
+            *dot = '\0';
+
+            // add data to old filename
+            strcat(encodedFileName, "_encoded");
+            strcat(encodedFileName, extensionBuffer);
+        }
+    }
 }
 
 void Encode(const char *inputFileName, const char *outputFileName, const char *key)
@@ -644,14 +672,15 @@ void Encode(const char *inputFileName, const char *outputFileName, const char *k
         exit(0);
     }
 
-    unsigned char buffer[keyLength];
+    // fixed buffer size
+    const size_t bufferSize = 1024;
+    unsigned char buffer[bufferSize];
     size_t bytesRead;
-    size_t keyIndex = 0;
 
-    // read file in chunks and write to new file
-    while((bytesRead = fread(buffer, 1, sizeof(buffer), inputFile)) > 0)
+    // read and write file in chunks
+    while ((bytesRead = fread(buffer, 1, bufferSize, inputFile)) > 0)
     {
-        for(size_t i = 0; i < bytesRead; ++i)
+        for (size_t i = 0; i < bytesRead; ++i)
         {
             // bit mask to encode file based on key input
             unsigned char bitMask = 1 << (key[i % keyLength] % 8);
@@ -696,6 +725,7 @@ int main(int argc, char *argv[])
     // find file extension
     const char *extension = strchr(fileName, '.');
     int isHuff = extension && strcmp(extension, ".oats") == 0;
+    int isImage = (extension && strcmp(extension, ".jpg") == 0) || (extension && strcmp(extension, ".png") == 0);
 
     printf("1. compress and encrypt file\n2. decrypt and decompress file\n");
     printf("\n3. compress a file\n4. decompress a file\n5. encrypt / decrypt a file\n\nYour Choice: ");
@@ -707,6 +737,12 @@ int main(int argc, char *argv[])
         if(isHuff)
         {
             printf("Error: can't compress a .oats file\n");
+            exit(0);
+        }
+
+        else if(isImage)
+        {
+            printf("Error: can't compress a an image file\n");
             exit(0);
         }
 
@@ -754,16 +790,20 @@ int main(int argc, char *argv[])
     if(choice == 1 || choice == 2 || choice == 5)
     {
         // ensure to only encode or decode valid file format
-        if(!isHuff)
+        if(!isHuff && !isImage)
         {
             printf("Error: only encode or decode .oats files\n");
             exit(0);
         }
 
         // key used for encryption
-        char key[100];
+        char key[101];
         printf("Enter your key for the file: ");
-        scanf("%s", key);
+        if(scanf("%100s", key) != 1)
+        {
+            printf("Error: key overflow.\n");
+            exit(0);
+        }
 
         // get encoded file name from compressed file name
         char encodedFileName[500];
