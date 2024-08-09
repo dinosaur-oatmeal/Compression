@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <limits.h>
 #include <unistd.h>
@@ -439,7 +440,30 @@ void CompressFile(const char *fileName, const char *outputFileName, NODE *root, 
     close(outputFile);
 }
 
+// see if file is valid for compression
+bool ASCII(char *inputFileName)
+{
+    int inputFile = open(inputFileName, O_RDONLY);
 
+    if(inputFile == NULL)
+    {
+        printf("Error: input file failed to open.\n");
+        exit(0);
+    }
+
+    int character;
+    while((character = fgetc(inputFile)) != EOF)
+    {
+        if(ch < 0 || ch > 127)
+        {
+            fclose(inputFile);
+            return false;
+        }
+    }
+
+    fclose(inputFile);
+    return true;
+}
 
 
 
@@ -615,7 +639,6 @@ void GetEncodedFileName(char *inputFileName, char *encodedFileName)
         //printf("\n%s\n", encodedFileName);
     }
 
-    // .jpg and .png file names
     else
     {
         // get original extension
@@ -716,7 +739,7 @@ int main(int argc, char *argv[])
     if (argc != 2)
     {
         printf("File must be provided on command line...exiting\n");
-        return 1;
+        exit(0);
     }
 
     int choice;
@@ -725,7 +748,6 @@ int main(int argc, char *argv[])
     // find file extension
     const char *extension = strchr(fileName, '.');
     int isHuff = extension && strcmp(extension, ".oats") == 0;
-    int isImage = (extension && strcmp(extension, ".jpg") == 0) || (extension && strcmp(extension, ".png") == 0);
 
     printf("1. compress and encrypt file\n2. decrypt and decompress file\n");
     printf("\n3. compress a file\n4. decompress a file\n5. encrypt / decrypt a file\n\nYour Choice: ");
@@ -736,14 +758,13 @@ int main(int argc, char *argv[])
     {
         if(isHuff)
         {
-            printf("Error: can't compress a .oats file\n");
+            printf("Error: can't compress a .oats file.\n");
             exit(0);
         }
 
-        else if(isImage)
+        if(!ASCII(fileName))
         {
-            printf("Error: can't compress a an image file\n");
-            exit(0);
+            printf("Error: can't compress this file.\n");
         }
 
         char compressedFileName[500];
@@ -781,18 +802,17 @@ int main(int argc, char *argv[])
         FreeHuffmanTree(root);
         FreeMinHeap(minHeap);
 
+        // necessary if file is being encoded immediately after compression
         strcpy(fileName, compressedFileName);
-        isHuff = 1;
     }
 
     // Encrypt / Decrypt
-
     if(choice == 1 || choice == 2 || choice == 5)
     {
-        // ensure to only encode or decode valid file format
-        if(!isHuff && !isImage)
+        // never encode source file
+        if(strcmp(fileName, "Compression.c") == 0)
         {
-            printf("Error: only encode or decode .oats files\n");
+            printf("Error: This file can't be encoded.\n");
             exit(0);
         }
 
