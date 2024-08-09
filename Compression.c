@@ -443,7 +443,7 @@ void CompressFile(const char *fileName, const char *outputFileName, NODE *root, 
 // see if file is valid for compression
 bool ASCII(char *inputFileName)
 {
-    int inputFile = open(inputFileName, O_RDONLY);
+    FILE *inputFile = fopen(inputFileName, "r");
 
     if(inputFile == NULL)
     {
@@ -454,7 +454,7 @@ bool ASCII(char *inputFileName)
     int character;
     while((character = fgetc(inputFile)) != EOF)
     {
-        if(ch < 0 || ch > 127)
+        if(character < 0 || character > 127)
         {
             fclose(inputFile);
             return false;
