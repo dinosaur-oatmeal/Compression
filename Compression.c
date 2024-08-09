@@ -116,7 +116,7 @@ MINHEAP* BuildMinHeap(int frequency[])
         }
     }
 
-    // heapify until min heap is completely made
+    // heapify until min heap is complete
     for(int i = (minHeap->size - 1) / 2; i >= 0; --i)
     {
         Heapify(minHeap, i);
@@ -129,7 +129,7 @@ NODE* BuildHuffmanTree(MINHEAP *minHeap)
 {
     while(minHeap->size != 1)
     {
-        // extract smallest 2 frequency nodes from the min heap
+        // extract smallest 2 frequency nodes from the min heap (left and right)
         NODE *left = minHeap->array[0];
         minHeap->array[0] = minHeap->array[minHeap->size - 1];
         minHeap->size--;
@@ -145,7 +145,7 @@ NODE* BuildHuffmanTree(MINHEAP *minHeap)
         top->leftPtr = left;
         top->rightPtr = right;
 
-        // insert new node into the tree
+        // insert new node into min heap
         minHeap->size++;
         minHeap->array[minHeap->size - 1]= top;
 
@@ -156,7 +156,7 @@ NODE* BuildHuffmanTree(MINHEAP *minHeap)
         }
     }
 
-    //returns root node
+    //returns root node of Huffman Tree
     return minHeap->array[0];
 }
 
@@ -192,7 +192,7 @@ void CalculateFrequency(const char *fileName, int frequency[MAXCHAR])
         exit(0);
     }
 
-    char buffer[1024];
+    char buffer[MAXCHAR];
     ssize_t bytesRead;
 
     // read file in chunks and update frequencies of characters
@@ -268,17 +268,7 @@ void GetCompressedFileName(char *inputFileName, char *compressedFileName)
     // Find the last occurrence of '.' in the input file name
     char *dot = strrchr(compressedFileName, '.');
 
-    // If there is no '.', append '_compressed.oats' to the end of the file name
-    if (dot == NULL)
-    {
-        strcat(compressedFileName, "_compressed.oats");
-    }
-
-    else
-    {
-        // Otherwise, insert '_compressed' before the '.'
-        strcpy(dot, "_compressed.oats");
-    }
+    strcpy(dot, "_compressed.oats");
 }
 
 // store huffman codes in a table to be used during compression
@@ -345,6 +335,7 @@ void WriteHuffmanTree(NODE *root, int outputFile)
         WriteHuffmanTree(root->leftPtr, outputFile);
         WriteHuffmanTree(root->rightPtr, outputFile);
     }
+
     else
     {
         // write the character of the leaf node
@@ -375,7 +366,7 @@ void CompressFile(const char *fileName, const char *outputFileName, NODE *root, 
     // write huffman tree to beginning of file
     WriteHuffmanTree(root, outputFile);
 
-    char buffer[1024];
+    char buffer[MAXCHAR];
     ssize_t bytesRead;
 
     // store bits before writing to output
@@ -385,7 +376,7 @@ void CompressFile(const char *fileName, const char *outputFileName, NODE *root, 
     int bitCount = 0;
 
     // buffer for output to minimize write calls
-    char outputBuffer[1024];
+    char outputBuffer[MAXCHAR];
     int outputBufferIndex = 0;
 
     // read files in chunks
@@ -452,6 +443,8 @@ bool ASCII(char *inputFileName)
     }
 
     int character;
+
+    // loop through and check ASCII values of every character in file
     while((character = fgetc(inputFile)) != EOF)
     {
         if(character < 0 || character > 127)
@@ -501,7 +494,7 @@ NODE* ReadHuffmanTree(int inputFile)
 
     NODE *node = CreateNewNode(character, 0);
 
-    // internal node
+    // recursively read left and right nodes until huffman tree is rebuilt
     if(character == '\0')
     {
         node->leftPtr = ReadHuffmanTree(inputFile);
@@ -531,6 +524,7 @@ void DecompressFile(const char *inputFileName, const char *outputFileName)
         exit(0);
     }
 
+    // read huffman tree into memory
     NODE *root = ReadHuffmanTree(inputFile);
 
     // avoid seg faults if the wrong key is provided
@@ -539,17 +533,18 @@ void DecompressFile(const char *inputFileName, const char *outputFileName)
         close(inputFile);
         close(outputFile);
         remove(outputFileName);
+        FreeHuffmanTree(root);
         printf("Failed to read Huffman Tree. Incorrect key provided.\n");
         exit(0);
     }
 
     NODE *current = root;
 
-    char buffer[1024];
+    char buffer[MAXCHAR];
     ssize_t bytesRead;
 
     // buffer for output to minimize write calls
-    char outputBuffer[1024];
+    char outputBuffer[MAXCHAR];
     int outputBufferIndex = 0;
 
     // read file in chunks
@@ -696,12 +691,11 @@ void Encode(const char *inputFileName, const char *outputFileName, const char *k
     }
 
     // fixed buffer size
-    const size_t bufferSize = 1024;
-    unsigned char buffer[bufferSize];
+    unsigned char buffer[MAXCHAR];
     size_t bytesRead;
 
     // read and write file in chunks
-    while ((bytesRead = fread(buffer, 1, bufferSize, inputFile)) > 0)
+    while ((bytesRead = fread(buffer, 1, MAXCHAR, inputFile)) > 0)
     {
         for (size_t i = 0; i < bytesRead; ++i)
         {
@@ -736,6 +730,7 @@ void Encode(const char *inputFileName, const char *outputFileName, const char *k
 
 int main(int argc, char *argv[])
 {
+    // file not provided on command line
     if (argc != 2)
     {
         printf("File must be provided on command line...exiting\n");
@@ -747,8 +742,9 @@ int main(int argc, char *argv[])
 
     // find file extension
     const char *extension = strchr(fileName, '.');
-    int isHuff = extension && strcmp(extension, ".oats") == 0;
+    int isOats = extension && strcmp(extension, ".oats") == 0;
 
+    // menu
     printf("1. compress and encrypt file\n2. decrypt and decompress file\n");
     printf("\n3. compress a file\n4. decompress a file\n5. encrypt / decrypt a file\n\nYour Choice: ");
     scanf("%d", &choice);
@@ -756,17 +752,21 @@ int main(int argc, char *argv[])
     // Compression
     if(choice == 1 || choice == 3)
     {
-        if(isHuff)
+        // don't compress already compressed files
+        if(isOats)
         {
             printf("Error: can't compress a .oats file.\n");
             exit(0);
         }
 
+        // only compress files with ASCII values (can't make Huffman tree on other data types)
         if(!ASCII(fileName))
         {
             printf("Error: can't compress this file.\n");
+            exit(0);
         }
 
+        // find name for compressed file
         char compressedFileName[500];
         GetCompressedFileName(fileName, compressedFileName);
 
@@ -841,7 +841,7 @@ int main(int argc, char *argv[])
     if(choice == 2 || choice == 4)
     {
         // only decompress valid file format
-        if(!isHuff)
+        if(!isOats)
         {
             printf("Error: can only decompress .oats files\n");
             exit(0);
