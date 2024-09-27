@@ -41,6 +41,13 @@ NODE* CreateNewNode(char character, int frequency)
 {
     NODE *temp = malloc(sizeof(NODE));
 
+    // ensure temp isn't NULL
+    if(temp == NULL)
+    {
+        printf("Memory Allocation Failed\n");
+        exit(0);
+    }
+
     temp->leftPtr = temp->rightPtr = NULL;
     temp->character = character;
     temp->frequency = frequency;
@@ -738,7 +745,9 @@ int main(int argc, char *argv[])
     }
 
     int choice;
-    char *fileName = argv[1];
+    char fileName[500];
+    strncpy(fileName, argv[1], sizeof(fileName) - 1);
+    fileName[sizeof(fileName) - 1] = '\0';
 
     // find file extension
     const char *extension = strchr(fileName, '.');
@@ -748,6 +757,12 @@ int main(int argc, char *argv[])
     printf("1. compress and encrypt file\n2. decrypt and decompress file\n");
     printf("\n3. compress a file\n4. decompress a file\n5. encrypt / decrypt a file\n\nYour Choice: ");
     scanf("%d", &choice);
+
+    if(choice < 1 || choice > 5)
+    {
+        printf("Invalid Choice\n");
+        exit(0);
+    }
 
     // Compression
     if(choice == 1 || choice == 3)
